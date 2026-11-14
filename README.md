@@ -1,120 +1,145 @@
 # Mid-Project Komunikasi Data dan Jaringan Komputer
 # Implementasi Jaringan Smart City Kota Surabaya
 
+# SOAL 1 - Perancangan Topologi
+## 1.1 Gambar Topologi
+![alt text](images/Topologi.png)
+ 
+## 1.2 Skema Pengalamatan yang Dipilih: VLSM
+ 
+Kelompok kami memilih **VLSM**. Alasannya:
+ 
+| Alasan | Penjelasan |
+|---|---|
+| Kebutuhan host sangat beragam | Ukuran LAN berkisar dari 20 host (Server Balai Kota) sampai 11.000 host (WiFi Publik Utara). VLSM memberi tiap subnet blok yang sesuai kebutuhannya. |
+| Lebih efisien | Total subnet memakai 61.752 dari 65.536 alamat pada blok /16, atau sekitar **94,2%**. Skema CIDR pada data yang sama membutuhkan blok /15 karena supernet tiap router dibulatkan ke pangkat dua, dengan pemakaian sekitar 52%. |
+| Perhitungan mudah diperiksa | Setiap subnet dihitung langsung dari kebutuhan hostnya, tanpa pohon penggabungan per router. |
+| Konsekuensi yang diterima | Rute antar-router tidak dapat diringkas per router, sehingga jumlah baris routing lebih banyak dibanding CIDR. |
+ 
+**Blok dasar: 10.104.0.0/16**
+ 
+- Oktet ke-2 adalah 8 × 13 = **104** (nomor kelompok 13).
+- Blok 10.0.0.0/8 adalah rentang alamat privat.
+- /16 dipilih karena total kebutuhan sekitar 61.752 alamat, sedangkan /17 hanya menyediakan 32.768.
+- Kebutuhan alamat tiap subnet dihitung sebagai host + 3 (network ID, broadcast, dan gateway), lalu dibulatkan ke pangkat dua terdekat.
+- Subnet dialokasikan dari blok terbesar ke terkecil agar setiap network ID jatuh tepat pada batas bloknya.
+**Alamat tambahan (tidak dihitung dalam blok di atas):**
+ 
+| Keperluan | Alamat |
+|---|---|
+| Link R-PUSAT ke R-ISP | 203.0.113.52/30 (4 × 13) |
+| Server internet | 8.8.8.0/24, Server 8.8.8.8, gateway 8.8.8.1 di R-ISP |
 
----
+## 1.3 Prinsip Desain 
+- Backbone (R-ISP, R-PUSAT, link L1 sampai L6) dan server 8.8.8.8 disusun sesuai skema pada soal
+- Satu perangkat perwakilan per LAN, perhitungan subnet tetap memakai jumlah host penuh
+- Setiap LAN diberi label nama subnet, Network ID/prefix, dan jumlah host.
 
-## 1. Gambar Topologi
-
-
-## 2. Alasan Pemilihan Skema Pengalamatan
-
----
-
-## 3. Penjelasan Desain Topologi
-
-### 3.1 Pemilihan Perangkat
-
+## 1.4 Pemilihan Perangkat
+ 
 | Perangkat | Dipakai untuk | Alasan |
 |---|---|---|
-| Router 2911 | R-ISP, R-DC, R-BARAT, R-TIMUR, R-SELATAN, R-PELABUHAN | Memiliki 3 port GigabitEthernet bawaan. Kebutuhan keenam router ini paling banyak 3 port, sehingga tidak perlu modul tambahan. |
-| Router-PT-Empty + modul PT-ROUTER-NM-1CGE | R-PUSAT dan R-UTARA | R-PUSAT membutuhkan 8 port dan R-UTARA 4 port, melebihi 3 port bawaan 2911. Router-PT-Empty dapat ditambah modul port Gigabit sesuai kebutuhan. |
-| Switch 2960 | Semua LAN | Satu LAN berisi banyak host, sehingga perlu satu titik kumpul. |
-| Server-PT | Server Balai Kota, Server dan Storage DC, Server 8.8.8.8 | Perlu menjalankan layanan (Web, DNS, DHCP, FTP, Email) pada tab Services. |
-| PC-PT | Pegawai, sensor, CCTV, PJU, SCADA, kantor | Mewakili perangkat pengguna atau perangkat IoT yang meminta IP dinamis. |
-| Access Point-PT | WiFi Publik | Menyediakan akses nirkabel bagi warga. |
+| Router 2911 | R-ISP, R-DC, R-BARAT, R-TIMUR, R-SELATAN, R-PELABUHAN | Memiliki 3 port GigabitEthernet bawaan, sedangkan kebutuhan keenam router ini paling banyak 3 port. |
+| Router-PT-Empty + modul PT-ROUTER-NM-1CGE | R-PUSAT dan R-UTARA | R-PUSAT butuh 8 port dan R-UTARA 4 port, melebihi 3 port bawaan 2911. Port Gigabit ditambah lewat modul. |
+| Switch 2960-24TT | Sembilan LAN kabel (lihat 1.7) | Satu LAN berisi banyak host, sehingga perlu satu titik kumpul. |
+| Server-PT | SRV-INTERNET, SRV-BALAIKOTA, SRV-DC | Perlu menjalankan layanan (Web, DNS, DHCP, FTP, Email) pada tab Services. |
+| PC-PT | Pegawai, sensor, CCTV, PJU, SCADA, kantor, puskesmas | Mewakili perangkat pengguna atau perangkat IoT yang meminta IP dinamis. |
+| Access Point-PT | LAN WiFi Publik | Menyediakan akses nirkabel bagi warga. |
 | Smartphone-PT | Klien WiFi Publik | Memiliki kartu jaringan wireless bawaan. PC-PT biasa hanya mendukung kabel. |
-
-### 3.2 Alasan Penggunaan Switch di Setiap LAN
-
-1. **Satu LAN berisi banyak host.** Satu port router hanya menerima satu kabel, sehingga tanpa switch hanya satu perangkat yang dapat terhubung.
-2. **Hemat port router.** Satu LAN memakai satu port router berapa pun jumlah perangkatnya. R-PUSAT sudah memakai 8 port, sehingga tidak ada ruang untuk satu port per perangkat.
-3. **Mudah dikembangkan.** Perangkat baru cukup dicolokkan ke switch tanpa mengubah router atau subnet.
-4. **Konsisten.** Semua LAN memakai pola yang sama sehingga topologi seragam.
-5. **Kabel sederhana.** Router ke switch dan switch ke perangkat memakai kabel Straight-Through.
-
-Setiap LAN memakai **switch terpisah** karena tiap LAN adalah subnet yang berbeda. Memakai satu switch bersama membutuhkan VLAN, yang tidak diperlukan pada soal ini dan menambah kompleksitas.
-
-### 3.3 Media Link: Kabel atau Wireless
-
+ 
+## 1.5 Media Link dan Jenis Kabel
+ 
+**Media link**
+ 
 | Lokasi | Media | Alasan |
 |---|---|---|
-| Backbone antar-router (L1 sampai L6, R-ISP ke R-PUSAT) | Kabel | Jalur utama harus stabil dan berkapasitas tinggi, serta mengikuti Gambar 1. |
-| Server (Balai Kota, DC, Internet) | Kabel | Server menjalankan layanan penting dan harus selalu tersedia. |
+| Backbone antar-router | Kabel | Jalur utama harus stabil dan mengikuti Gambar 1. |
+| Server (Balai Kota, DC, Internet) | Kabel | Menjalankan layanan penting yang harus selalu tersedia. |
 | CCTV Kota | Kabel | Rekaman video membutuhkan bandwidth besar dan koneksi tanpa putus ke server FTP. |
-| Sensor (lalu lintas, banjir, SCADA) dan PJU Pintar | Kabel | Perangkat tetap yang data pantauannya tidak boleh hilang oleh gangguan sinyal. |
-| Pegawai dan Kantor (Balai Kota, Pelabuhan) | Kabel | Perangkat kerja tetap, butuh koneksi stabil untuk email dan portal. |
-| Puskesmas dan Sekolah | Kabel | Layanan publik tetap yang membutuhkan koneksi andal. |
-| **WiFi Publik** (Utara, Timur, Selatan, Barat) | **Wireless** | Dipakai warga dengan perangkat bergerak. Access Point dihubungkan ke switch dengan kabel agar jalur ke router tetap stabil. |
-
-### 3.4 Jenis Kabel
-
-| Sambungan | Kabel |
+| Sensor (lalu lintas, banjir, SCADA) dan PJU Pintar | Kabel | Perangkat tetap yang datanya tidak boleh hilang karena gangguan sinyal. |
+| Pegawai Balai Kota, Kantor Pelabuhan, Puskesmas dan Sekolah | Kabel | Perangkat kerja tetap yang butuh koneksi stabil. |
+| WiFi Publik (Utara, Timur, Selatan, Barat) | Wireless | Dipakai warga dengan perangkat bergerak. |
+ 
+**Jenis kabel**
+ 
+| Menghubungkan | Kabel |
 |---|---|
-| Router ke Router (backbone) | Copper Cross-Over |
-| Router ke Server Internet (8.8.8.8) | Copper Cross-Over |
-| Router ke Switch | Copper Straight-Through |
-| Switch ke PC, Server, atau Access Point | Copper Straight-Through |
+| Router ke Router | Copper Cross-Over |
+| Router ke Switch atau Access Point | Copper Straight-Through |
+| Switch ke PC atau Server | Copper Straight-Through |
+| Router langsung ke Server (SRV-INTERNET, SRV-BALAIKOTA) | Copper Straight-Through (sesuai topologi, link menyala hijau) |
 | Access Point ke Smartphone | Wireless (SSID yang sama) |
-
-### 3.5 Penambahan Port pada Router
-
+ 
+## 1.6 Penambahan Port pada Router
+ 
 | Router | Link ke router lain | LAN | Total port | Solusi |
 |---|---|---|---|---|
-| R-ISP | 1 (ke R-PUSAT) | 1 (Server 8.8.8.8) | 2 | Port bawaan 2911 |
-| R-PUSAT | 6 (R-ISP, L1 sampai L5) | 2 (Pegawai, Server Balai Kota) | **8** | Router-PT-Empty + 8 modul NM-1CGE |
+| R-ISP | 1 (ke R-PUSAT) | 1 (SRV-INTERNET) | 2 | Port bawaan 2911 |
+| R-PUSAT | 6 (R-ISP, L1 sampai L5) | 2 | **8** | Router-PT-Empty + 8 modul NM-1CGE |
 | R-DC | 1 | 2 | 3 | Port bawaan 2911 |
 | R-BARAT | 1 | 2 | 3 | Port bawaan 2911 |
 | R-UTARA | 2 (L2, L6) | 2 | **4** | Router-PT-Empty + 4 modul NM-1CGE |
 | R-TIMUR | 1 | 2 | 3 | Port bawaan 2911 |
 | R-SELATAN | 1 | 2 | 3 | Port bawaan 2911 |
 | R-PELABUHAN | 1 | 2 | 3 | Port bawaan 2911 |
-
-### 3.5.1 Pemetaan Port
-
-**R-PUSAT**
-
-| Port | Tujuan |
-|---|---|
-| G0/0 | R-ISP |
-| G1/0 | L1 ke R-DC |
-| G2/0 | L2 ke R-UTARA |
-| G3/0 | L3 ke R-SELATAN |
-| G4/0 | L4 ke R-TIMUR |
-| G5/0 | L5 ke R-BARAT |
-| G6/0 | LAN Pegawai Balai Kota |
-| G7/0 | LAN Server Balai Kota |
-
-**R-UTARA**
-
-| Port | Tujuan |
-|---|---|
-| G0/0 | L2 ke R-PUSAT |
-| G1/0 | L6 ke R-PELABUHAN |
-| G2/0 | LAN WiFi Publik Utara |
-| G3/0 | LAN Sensor Lalu Lintas Utara |
-
-**Router 2911**
-
+ 
+**Pemetaan port**
+ 
+| Router | Port | Tujuan |
+|---|---|---|
+| R-PUSAT | G0/0 | R-ISP |
+| | G1/0 | L1 ke R-DC |
+| | G2/0 | L2 ke R-UTARA |
+| | G3/0 | L3 ke R-SELATAN |
+| | G4/0 | L4 ke R-TIMUR |
+| | G5/0 | L5 ke R-BARAT |
+| | G6/0 | LAN Pegawai Balai Kota |
+| | G7/0 | LAN Server Balai Kota |
+| R-UTARA | G0/0 | L2 ke R-PUSAT |
+| | G1/0 | L6 ke R-PELABUHAN |
+| | G2/0 | LAN WiFi Publik Utara |
+| | G3/0 | LAN Sensor Lalu Lintas Utara |
+ 
+Router 2911 (G0/0, G0/1, G0/2):
+ 
 | Router | G0/0 | G0/1 | G0/2 |
 |---|---|---|---|
-| R-ISP | ke R-PUSAT | Server 8.8.8.8 | tidak dipakai |
+| R-ISP | ke R-PUSAT | SRV-INTERNET | tidak dipakai |
 | R-DC | L1 ke R-PUSAT | LAN CCTV Kota | LAN Server dan Storage DC |
 | R-BARAT | L5 ke R-PUSAT | LAN WiFi Barat | LAN Puskesmas dan Sekolah |
 | R-TIMUR | L4 ke R-PUSAT | LAN WiFi Timur | LAN Sensor Banjir |
 | R-SELATAN | L3 ke R-PUSAT | LAN WiFi Selatan | LAN PJU Pintar |
 | R-PELABUHAN | L6 ke R-UTARA | LAN Sensor SCADA | LAN Kantor Pelabuhan |
+ 
+## 1.7 Desain per Lokasi
+ 
+| Router | LAN | Perangkat pengumpul | Perangkat perwakilan | Media |
+|---|---|---|---|---|
+| R-PUSAT | Pegawai Balai Kota | SW-PEGAWAI-BALAIKOTA | PC-PEGAWAI-BALAIKOTA | Kabel |
+| R-PUSAT | Server Balai Kota | langsung ke router | SRV-BALAIKOTA | Kabel |
+| R-DC | CCTV Kota | SW-CCTV-KOTA | PC-CCTV-KOTA | Kabel |
+| R-DC | Server dan Storage DC | SW-DC | SRV-DC | Kabel |
+| R-BARAT | WiFi Publik Barat | AP-WIFI-BARAT | HP-WIFI-BARAT | Wireless |
+| R-BARAT | Puskesmas dan Sekolah Barat | SW-PUSKESMAS-BARAT | PC-PUSKESMAS-BARAT | Kabel |
+| R-UTARA | WiFi Publik Utara | AP-WIFI-UTARA | HP-WIFI-UTARA | Wireless |
+| R-UTARA | Sensor Lalu Lintas Utara | SW-SENSOR-LALIN | PC-SENSOR-LALIN | Kabel |
+| R-TIMUR | WiFi Publik Timur | AP-WIFI-TIMUR | HP-WIFI-TIMUR | Wireless |
+| R-TIMUR | Sensor Banjir Timur | SW-SENSOR-BANJIR | PC-SENSOR-BANJIR | Kabel |
+| R-SELATAN | WiFi Publik Selatan | AP-WIFI-SELATAN | HP-WIFI-SELATAN | Wireless |
+| R-SELATAN | PJU Pintar Selatan | SW-PJU-SELATAN | PC-PJU-SELATAN | Kabel |
+| R-PELABUHAN | Sensor dan SCADA Pelabuhan | SW-SCADA-PELABUHAN | PC-SCADA-PELABUHAN | Kabel |
+| R-PELABUHAN | Kantor Pelabuhan | SW-KANTOR-PELABUHAN | PC-KANTOR-PELABUHAN | Kabel |
+ 
+## 1.8 Alasan dan Pertimbangan Desain
+ 
+1. **Switch pada LAN kabel.** Satu LAN berisi puluhan sampai ribuan host, sedangkan satu port router hanya menerima satu kabel. Switch menjadi titik kumpul, dan satu LAN tetap memakai satu port router. Setiap LAN memakai switch sendiri karena tiap LAN adalah subnet yang berbeda, sehingga tidak perlu VLAN.
+2. **Access Point langsung ke router.** Access Point sudah berfungsi sebagai perangkat akses yang menampung banyak klien nirkabel, dan simulasi hanya memakai satu AP per LAN. Jika kelak AP ditambah, switch dapat disisipkan tanpa mengubah subnet.
+3. **Server Balai Kota langsung ke router.** LAN ini diwakili satu server sesuai ketentuan soal. Jika LAN sebenarnya berisi lebih dari satu server, ditambahkan switch tanpa mengubah subnet.
+4. **Kabel untuk perangkat tetap, wireless untuk warga.** Sensor, CCTV, server, dan kantor membutuhkan koneksi stabil. WiFi Publik dipakai perangkat bergerak, sehingga memakai wireless.
+5. **Tunnel dan layanan tidak digambar di topologi.** Topologi hanya memuat perangkat dan kabel fisik.
+6. **Perangkat perwakilan.** Satu perangkat per LAN sudah cukup. Perhitungan subnet tetap memakai jumlah host penuh.
 
----
-
-## 4. Label LAN
-
-
-| LAN | Network ID/prefix | Jumlah host |
-|---|---|---|
-| ... | ... | ... |
-
-## Soal 3 
+# SOAL 3 
 ### Penjelasan singkat
 Membuat semua LAN Smart City Surabaya saling terhubung menggunakan **static routing**: R-PUSAT memiliki static route ke semua LAN cabang, router cabang memiliki default route ke R-PUSAT, dan R-UTARA memiliki static route ke LAN R-PELABUHAN. R-ISP sengaja **tidak** diberi route ke `10.104.0.0/16` (disiapkan untuk Soal 5 NAT). Output file baru: `v2_static.pkt` (file asli `v1.pkt` tidak diubah).
 
