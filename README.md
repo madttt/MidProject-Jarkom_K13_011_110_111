@@ -139,6 +139,12 @@ Router 2911 (G0/0, G0/1, G0/2):
 5. **Tunnel dan layanan tidak digambar di topologi.** Topologi hanya memuat perangkat dan kabel fisik.
 6. **Perangkat perwakilan.** Satu perangkat per LAN sudah cukup. Perhitungan subnet tetap memakai jumlah host penuh.
 
+# SOAL 2
+## Tabel Subnetting
+Spreadsheet lengkap: <a href="https://docs.google.com/spreadsheets/d/1yMvPR45FCVxfc-NhGsegs_fDxxSXmV0BuXG8RNnOhl0/edit?gid=636640205#gid=636640205">K13_Subnetting.xlsx</a>
+<br>
+Skema yang dipakai pada topologi adalah VLSM dengan blok dasar `10.104.0.0/16`. Tabel pengalamatan CIDR dan supernet per router ada pada sheet CIDR di spreadsheet yang sama. Perhitungan UTS kami periksa ulang. Semua subnet berubah, dan hampir seluruhnya berasal dari beberapa kesalahan yang saling menurun
+
 # SOAL 3 
 ### Penjelasan singkat
 Membuat semua LAN Smart City Surabaya saling terhubung menggunakan **static routing**: R-PUSAT memiliki static route ke semua LAN cabang, router cabang memiliki default route ke R-PUSAT, dan R-UTARA memiliki static route ke LAN R-PELABUHAN. R-ISP sengaja **tidak** diberi route ke `10.104.0.0/16` (disiapkan untuk Soal 5 NAT). Output file baru: `v2_static.pkt` (file asli `v1.pkt` tidak diubah).
