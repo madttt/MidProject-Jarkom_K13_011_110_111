@@ -172,30 +172,55 @@ Membuat semua LAN Smart City Surabaya saling terhubung menggunakan **static rout
 ### Verifikasi
 - `PC-PEGAWAI`: `ipconfig` → IP `10.104.224.10/21`, gw `10.104.224.1`.
 - `ping 10.104.224.1` → 4/4 reply.
+
+  ![Ping Gateway](images/Pasted%20image%2020261115210244.png)
+
 - `ping 10.104.96.10` (CCTV) → reply (percobaan kedua, ARP/STP warm-up).
+
+  ![Ping CCTV](images/2026-11-15_21-04.png)
+
 - R-PUSAT: `show ip route` → static route ke LAN cabang + default `0.0.0.0/0 via 203.0.113.54`.
+
+  ![Show IP Route R-PUSAT](images/Pasted%20image%2020261115210809.png)
+
 - Router cabang: `show ip route` → default route via R-PUSAT; R-UTARA juga route ke `10.104.160.0/19` & `10.104.240.0/25`.
+
+  ![Show IP Route Router Cabang](images/Pasted%20image%2020261115210847.png)
+
 - R-ISP: `show ip route` → **tidak** ada route ke `10.104.0.0/16`.
 - Workspace List → Links = 31, Devices = 39; tidak ada `Router0/Switch1/PC0`.
-## Soal 4 
+
+# SOAL 4
 ### Penjelasan singkat
 Seluruh end device (pengguna) diubah dari IP static menjadi **DHCP** (IP, mask, gateway, DNS otomatis). Interface router dan server tetap static. Subnet CCTV (`10.104.96.0/19`) mendapat DHCP dari `SRV-DC` (pool `CCTV-KOTA`) via `ip helper-address 10.104.239.10` pada `R-DC Gi0/1`, bukan dari R-DC. Dibuat 11 pool router + 1 pool CCTV. DNS semua pool = `10.104.239.10`. Output: `v4_dhcp.pkt`.
+
 ### Proses pengerjaan
 1. Buat 11 pool DHCP di router (PEGAWAI, WIFI-UTARA, SENSOR-LALIN, WIFI-TIMUR, SENSOR-BANJIR, WIFI-BARAT, PUSKESMAS, WIFI-SELATAN, PJU-SELATAN, SCADA-PELABUHAN, KANTOR-PELABUHAN) dengan network/mask/gateway sesuai VLSM dan `dns-server 10.104.239.10`, `excluded-address` = gateway.
-3. Buat pool `CCTV-KOTA` di `SRV-DC` (Services → DHCP): network `10.104.96.0/19`, gw `10.104.96.1`, DNS `10.104.239.10`, start `10.104.96.2`.
-4. Set `ip helper-address 10.104.239.10` pada `R-DC Gi0/1`; pastikan R-DC tidak punya pool CCTV.
-5. Set 12 end device ke `DHCP=true` dan kosongkan field IP static.
-6. Pastikan router/server tetap static.
+2. Buat pool `CCTV-KOTA` di `SRV-DC` (Services → DHCP): network `10.104.96.0/19`, gw `10.104.96.1`, DNS `10.104.239.10`, start `10.104.96.2`.
+3. Set `ip helper-address 10.104.239.10` pada `R-DC Gi0/1`; pastikan R-DC tidak punya pool CCTV.
+4. Set 12 end device ke `DHCP=true` dan kosongkan field IP static.
+5. Pastikan router/server tetap static.
+
 ### Verifikasi
 - R-PUSAT: `show running-config` → `ip dhcp pool PEGAWAI` + `dns-server 10.104.239.10`.
-- SRV-DC → Services → DHCP → pool `CCTV-KOTA` (network `10.104.96.0/19`, gw `10.104.96.1`, DNS `10.104.239.10`).
-- R-DC: `show running-config interface GigabitEthernet0/1` → `ip helper-address 10.104.239.10`.
-- `PC-CCTV-KOTA`: `ipconfig /all` → IP `10.104.96.2`, gw `10.104.96.1`, DHCP server `10.104.239.10`, DNS `10.104.239.10`.
-- HP lease: UTARA `10.104.0.2`, TIMUR `10.104.128.2`, SELATAN `10.104.64.2`, BARAT `10.104.192.3`.
-- `nslookup www.k13.smartcity.lab` dan `ping www.k13.smartcity.lab` dari PC DHCP → reply.
-- Link = 31, device = 39; server/router static tetap.
 
-# SOAL 5 
+  ![DHCP Pool R-PUSAT](images/Pasted%20image%2020261115211408.png)
+
+- SRV-DC → Services → DHCP → pool `CCTV-KOTA` (network `10.104.96.0/19`, gw `10.104.96.1`, DNS `10.104.239.10`).
+
+  ![DHCP Pool CCTV-KOTA SRV-DC](images/Pasted%20image%2020261115211458.png)
+
+- R-DC: `show running-config interface GigabitEthernet0/1` → `ip helper-address 10.104.239.10`.
+
+  ![IP Helper Address R-DC](images/Pasted%20image%2020261115211535.png)
+
+- `PC-CCTV-KOTA`: `ipconfig /all` → IP `10.104.96.2`, gw `10.104.96.1`, DHCP server `10.104.239.10`, DNS `10.104.239.10`.
+
+  ![IPConfig PC-CCTV-KOTA](images/Pasted%20image%2020261115211704.png)
+
+- HP lease: UTARA `10.104.0.2`, TIMUR `10.104.128.2`, SELATAN `10.104.64.2`, BARAT `10.104.192.3`.
+
+# SOAL 5
 ### Penjelasan singkat
 Seluruh host internal (`10.104.0.0/16`) mengakses internet lewat **satu IP publik** milik R-PUSAT menggunakan **NAT overload (PAT)**. R-ISP tetap tanpa route ke internal. Output: `v5_nat.pkt`.
 
@@ -205,38 +230,68 @@ Seluruh host internal (`10.104.0.0/16`) mengakses internet lewat **satu IP publi
    - `Gi1/0`–`Gi7/0` (link internal + 2 LAN Balai Kota) → `ip nat inside`.
    - `access-list 1 permit 10.104.0.0 0.0.255.255`.
    - `ip nat inside source list 1 interface GigabitEthernet0/0 overload`.
-3. Biarkan R-ISP tanpa static route ke internal (hanya tahu `203.0.113.52/30` dan `8.8.8.0/24`).
-4. `SRV-INTERNET = 8.8.8.8/24`, gw `8.8.8.1`; R-ISP `Gi0/1 = 8.8.8.1/24`.
+2. Biarkan R-ISP tanpa static route ke internal (hanya tahu `203.0.113.52/30` dan `8.8.8.0/24`).
+3. `SRV-INTERNET = 8.8.8.8/24`, gw `8.8.8.1`; R-ISP `Gi0/1 = 8.8.8.1/24`.
 
 ### Verifikasi
 - R-PUSAT: `show running-config` → `ip nat outside` (Gi0/0), `ip nat inside` (Gi1/0–Gi7/0), ACL `10.104.0.0 0.0.255.255`, `ip nat inside source list 1 interface GigabitEthernet0/0 overload`.
+
+  ![Running Config NAT R-PUSAT](images/Pasted%20image%2020261115212119.png)
+
 - R-ISP: `show ip route` → tidak ada route ke `10.104.0.0/16`.
+
+  ![Show IP Route R-ISP](images/Pasted%20image%2020261115212153.png)
+
 - `PC-PEGAWAI`: `ping 8.8.8.8` → `Reply from 8.8.8.8` (ping pertama boleh timeout karena ARP warm-up, ulangi).
+
+  ![Ping 8.8.8.8 PC-PEGAWAI](images/Pasted%20image%2020261115212448.png)
+
 - R-PUSAT: `show ip nat statistics` → Outside `Gi0/0`, Inside 7 interface, `Hits > 0`, `Expired translations > 0`.
+
+  ![Show IP NAT Statistics R-PUSAT](images/Pasted%20image%2020261115212525.png)
+
 - DHCP/layanan/routing internal tetap berfungsi.
 
-# SOAL 6 
+# SOAL 6
 ### Penjelasan singkat
 Membuat **GRE tunnel** `Tunnel0` antara R-PUSAT (Balai Kota) dan R-PELABUHAN, sehingga lalu lintas antara kedua area harus lewat tunnel (menggantikan jalur via R-UTARA). Dilengkapi dokumentasi: mengapa tunnel vs jalur biasa, dan mengapa GRE tidak mengenkripsi (bonus IPsec). Output: `v6_gre.pkt`.
 
 ### Proses pengerjaan
 1. Upgrade IOS R-PUSAT dari `pt_12.2` ke `2900_universal_base_15.1` agar mendukung `interface Tunnel` (port & IP tetap).
-3. Konfigurasi GRE tunnel:
+2. Konfigurasi GRE tunnel:
    - R-PUSAT: `Tunnel0` IP `192.168.0.1/30`, source `Gi2/0` (`10.104.241.37`), dest `10.104.241.54`.
    - R-PELABUHAN: `Tunnel0` IP `192.168.0.2/30`, source `Gi0/0` (`10.104.241.54`), dest `10.104.241.37`.
-4. Route lewat tunnel:
+3. Route lewat tunnel:
    - R-PUSAT: `10.104.160.0/19` dan `10.104.240.0/25 via 192.168.0.2`.
    - R-PELABUHAN: `10.104.224.0/21` dan `10.104.241.0/27 via 192.168.0.1`.
-5. Dokumentasi alasan: tunnel membuat link point-to-point logis langsung sehingga traffic Balai Kota ↔ Pelabuhan tidak bergantung routing R-UTARA; GRE hanya encapsulation (bukan encryption), payload tetap plaintext → perlu IPsec untuk kerahasiaan.
+4. Dokumentasi alasan: tunnel membuat link point-to-point logis langsung sehingga traffic Balai Kota ↔ Pelabuhan tidak bergantung routing R-UTARA; GRE hanya encapsulation (bukan encryption), payload tetap plaintext → perlu IPsec untuk kerahasiaan.
 
 ### Verifikasi
 - R-PUSAT: `show ip interface brief` → `Tunnel0` up/up, IP `192.168.0.1`.
-- R-PUSAT: `ping 192.168.0.2` → 5/5 (percobaan pertama boleh 2/5, ulangi).
-- R-PUSAT: `traceroute 10.104.240.1` → hop pertama `192.168.0.2` (tunnel, bukan R-UTARA).
-- `PC-PEGAWAI` (Balai Kota): `ping 10.104.240.1` dan `ping 10.104.160.1` → reply; sebaliknya dari Pelabuhan ke Balai Kota juga berhasil.
-- R-PUSAT & R-PELABUHAN: `show running-config` → cek Tunnel0 + route via `192.168.0.x`.
-- DHCP/NAT/layanan/routing internal tetap berfungsi; link = 31, device = 39.
 
+  ![Show IP Interface Brief R-PUSAT](images/Pasted%20image%2020261115212604.png)
+
+- R-PUSAT: `ping 192.168.0.2` → 5/5 (percobaan pertama boleh 2/5, ulangi).
+
+  ![Ping Tunnel R-PUSAT](images/Pasted%20image%2020261115212636.png)
+
+- R-PUSAT: `traceroute 10.104.240.1` → hop pertama `192.168.0.2` (tunnel, bukan R-UTARA).
+
+  ![Traceroute via Tunnel R-PUSAT](images/Pasted%20image%2020261115212729.png)
+
+- `PC-PEGAWAI` (Balai Kota): `ping 10.104.240.1` dan `ping 10.104.160.1` → reply; sebaliknya dari Pelabuhan ke Balai Kota juga berhasil.
+
+  ![Ping Balai Kota ke Pelabuhan](images/Pasted%20image%2020261115212812.png)
+
+  ![Ping Pelabuhan ke Balai Kota](images/Pasted%20image%2020261115212901.png)
+
+- R-PUSAT & R-PELABUHAN: `show running-config` → cek Tunnel0 + route via `192.168.0.x`.
+
+  ![Running Config Tunnel R-PUSAT](images/2026-11-15_21-29.png)
+
+  ![Running Config Tunnel R-PELABUHAN](images/2026-11-15_21-30.png)
+
+- DHCP/NAT/layanan/routing internal tetap berfungsi; link = 31, device = 39.
 # SOAL 7
 ### Penjelasan singkat
 Seluruh static route antar-router diganti dengan **OSPF** (process 1, area 0) di file terpisah `K13_VLSM_OSPF.pkt`. Ditambahkan link cadangan **L7** antara R-DC dan R-UTARA memakai alamat yang belum terpakai, `10.104.241.56/30` (blok /30 pertama setelah L6). Interface LAN dibuat `passive-interface` agar OSPF tidak mengirim pesan ke LAN pengguna. Default route ke internet hanya dikonfigurasi di R-PUSAT dan disebarkan ke router lain dengan `default-information originate`. Jika link backbone putus, OSPF otomatis memindahkan jalur lewat L7.
