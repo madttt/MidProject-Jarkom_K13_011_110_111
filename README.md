@@ -1,5 +1,7 @@
 # Mid-Project Komunikasi Data dan Jaringan Komputer
 # Implementasi Jaringan Smart City Kota Surabaya
+### Link Vidio Demo
+https://youtu.be/OmJ-dyXi8ck 
 
 # SOAL 1 - Perancangan Topologi
 ## 1.1 Gambar Topologi
@@ -144,6 +146,15 @@ Router 2911 (G0/0, G0/1, G0/2):
 Spreadsheet lengkap: <a href="https://docs.google.com/spreadsheets/d/1yMvPR45FCVxfc-NhGsegs_fDxxSXmV0BuXG8RNnOhl0/edit?gid=636640205#gid=636640205">K13_Subnetting.xlsx</a>
 <br>
 Skema yang dipakai pada topologi adalah VLSM dengan blok dasar `10.104.0.0/16`. Tabel pengalamatan CIDR dan supernet per router ada pada sheet CIDR di spreadsheet yang sama. Perhitungan UTS kami periksa ulang. Semua subnet berubah, dan hampir seluruhnya berasal dari beberapa kesalahan yang saling menurun
+
+![alt text](<images/Soal 2_R_SELATAN.png>)
+![alt text](<images/Soal 2_R_UTARA.png>)
+![alt text](<images/Soal 2_R-BARAT.png>)
+![alt text](<images/Soal 2_R-DC.png>)
+![alt text](<images/Soal 2_R-ISP.png>)
+![alt text](<images/Soal 2_R-PELABUHAN.png>)
+![alt text](<images/Soal 2_R-PUSAT.png>)
+![alt text](<images/Soal 2_R-TIMUR.png>)
 
 # SOAL 3 
 ### Penjelasan singkat
@@ -306,12 +317,7 @@ SRV-DC dipilih sebagai server DNS karena soal menempatkan DNS di LAN Server dan 
 
 **Konfigurasi di SRV-DC:** buka tab **Services**, pilih **DNS**, lalu nyalakan **DNS Service (On)**. Tambahkan record bertipe **A Record**:
 
-| Name | Type | Address | Menunjuk ke |
-|---|---|---|---|
-| www.k13.smartcity.lab | A Record | [ISI: IP SRV-BALAIKOTA] | Server web |
-| ftp.k13.smartcity.lab | A Record | 10.104.239.[ISI] | SRV-DC |
-| mail.k13.smartcity.lab | A Record | [ISI: IP server email] | Server email |
-
+![alt text](<images/Soal 8_DNS_Service.png>)
 
 **Pengujian:** dari satu perangkat di setiap wilayah, jalankan di Command Prompt:
 
@@ -320,11 +326,23 @@ nslookup www.k13.smartcity.lab
 nslookup ftp.k13.smartcity.lab
 nslookup mail.k13.smartcity.lab
 ```
+![alt text](<images/Soal 8_DNS_Banjir.png>)
+![alt text](<images/Soal 8_DNS_CCTV.png>)
+![alt text](<images/Soal 8_DNS_HP Barat.png>)
+![alt text](<images/Soal 8_DNS_HP Selatan.png>)
+![alt text](<images/Soal 8_DNS_HP Timur.png>)
+![alt text](<images/Soal 8_DNS_HP Utara.png>)
+![alt text](<images/Soal 8_DNS_Kantor Pelabuhan.png>)
+![alt text](<images/Soal 8_DNS_Lanlin.png>)
+![alt text](<images/Soal 8_DNS_Pegawai.png>)
+![alt text](<images/Soal 8_DNS_PJU.png>)
+![alt text](<images/Soal 8_DNS_Puskesmas.png>)
+![alt text](<images/Soal 8_DNS_SCADA.png>)
 
 ### 8.3 Web "Portal Smart City Surabaya" (Soal 8b)
 
 **Konfigurasi di SRV-BALAIKOTA:** buka tab **Services**, pilih **HTTP**, nyalakan **HTTP (On)**. Ubah berkas **index.html** menjadi halaman portal yang memuat nomor kelompok, misalnya:
-
+![alt text](<images/Soal 8_Web_Service.png>)
 ```html
 <html>
   <head><title>Portal Smart City Surabaya</title></head>
@@ -336,33 +354,56 @@ nslookup mail.k13.smartcity.lab
 ```
 
 **Pengujian:** dari perangkat di setiap wilayah, buka **Web Browser** dan akses `http://www.k13.smartcity.lab`. Halaman harus tampil dengan judul dan nomor kelompok.
+![alt text](<images/Soal 8_Web_Banjir.png>)
+![alt text](<images/Soal 8_Web_CCTV.png>)
+![alt text](<images/Soal 8_Web_HP Barat.png>)
+![alt text](<images/Soal 8_Web_HP selatan.png>)
+![alt text](<images/Soal 8_Web_HP Timur.png>)
+![alt text](<images/Soal 8_Web_HP Utara.png>)
+![alt text](<images/Soal 8_Web_Lanlin.png>)
+![alt text](<images/Soal 8_Web_Pegawai.png>)
+![alt text](<images/Soal 8_Web_Pelabuhan.png>)
+![alt text](<images/Soal 8_Web_PJU.png>)
+![alt text](<images/Soal 8_Web_Puskesmas.png>)
+![alt text](<images/Soal 8_Web_SCADA.png>)
 
 ### 8.4 FTP Rekaman CCTV (Soal 8c)
 
 FTP ditempatkan di SRV-DC sebagai penyimpanan rekaman CCTV, dan akses mewajibkan akun login.
 
-**Konfigurasi di SRV-DC:** buka tab **Services**, pilih **FTP**, nyalakan **FTP Service (On)**. Pada daftar akun:
+**Konfigurasi di SRV-DC:** buka tab **Services**, pilih **FTP**, nyalakan **FTP Service (On)**. Pada daftar akun: <br>
+**Langkah**:Tambah akun `cctv` dengan password `cctv` dan izin **Write, Read, Delete, Rename, List** <br> 
+**Tujuan**: Akun untuk perangkat CCTV mengunggah rekaman <br>
 
-| Langkah | Tujuan |
-|---|---|
-| Tambah akun `[ISI: mis. cctv]` dengan password `[ISI]` dan izin **Write, Read, Delete, Rename, List** | Akun untuk perangkat CCTV mengunggah rekaman |
+![alt text](<images/Soal 8_FTP_Service.png>)
 
 **Pengujian dari PC-CCTV-KOTA:**
 
-1. Buat berkas contoh lewat **Desktop, Text Editor**, simpan sebagai `rekaman_cctv_01.txt`.
+1. Buat berkas contoh lewat **Desktop, Text Editor**, simpan sebagai `rekaman.txt`.
 2. Buka **Command Prompt** dan jalankan:
 
 ```
 ftp ftp.k13.smartcity.lab
-Username: [ISI]
-Password: [ISI]
-ftp> put rekaman_cctv_01.txt
+Username: cctv
+Password: cctv123
+ftp> put rekaman.txt
 ftp> dir
-ftp> quit
 ```
 
 3. Berkas muncul pada daftar `dir`, dan juga pada tab Services, FTP di SRV-DC.
 4. Percobaan login dengan akun yang salah harus ditolak.
+![alt text](<images/Soal 8_FTP put_unggah.png>)
+
+**Pengujian dari : Host Lain (Kantor Pelabuhan)**
+1. Buka **Command Prompt** dan jalankan:
+
+```
+ftp ftp.k13.smartcity.lab
+Username: cctv
+Password: cctv123
+ftp> get rekaman.txt
+```
+![alt text](<images/Soal 8_FTP get.png>)
 
 ### 8.5 Email Antarpegawai (Soal 8d)
 
@@ -372,17 +413,16 @@ Pengguna di Balai Kota dan Pelabuhan dapat saling mengirim dan menerima email.
 
 | Pengguna | Perangkat | Email | Password |
 |---|---|---|---|
-| [ISI: mis. pegawai] | PC-PEGAWAI-BALAIKOTA (Balai Kota) | [ISI]@k13.smartcity.lab | [ISI] |
-| [ISI: mis. pelabuhan] | PC-KANTOR-PELABUHAN (Pelabuhan) | [ISI]@k13.smartcity.lab | [ISI] |
+| pegawai | PC-PEGAWAI-BALAIKOTA (Balai Kota) | pegawai@k13.smartcity.lab | pegawai13 |
+| pelabuhan | PC-KANTOR-PELABUHAN (Pelabuhan) | pelabuhan@k13.smartcity.lab | pelabuhan13 |
 
 **Konfigurasi di perangkat pengguna:** buka **Desktop, Email, Configure Mail**, lalu isi:
 
-| Kolom | Isi |
-|---|---|
-| Your Name | [ISI] |
-| Email Address | [ISI]@k13.smartcity.lab |
-| Incoming Mail Server | mail.k13.smartcity.lab |
-| Outgoing Mail Server | mail.k13.smartcity.lab |
-| User Name dan Password | sesuai akun di server |
+![alt text](<images/Soal 8_Email_Config Pegawai.png>)
+![alt text](<images/Soal 8_Email_Config Pelabuhan.png>)
+*User Name dan Password, sesuai akun di server 
 
 **Pengujian:** kirim email dari PC-PEGAWAI-BALAIKOTA ke PC-KANTOR-PELABUHAN, terima di Pelabuhan lewat tombol **Receive**, lalu balas dari Pelabuhan ke Balai Kota.
+
+![alt text](<images/Soal 8_Pegawai_Email Recieve.png>)
+![alt text](<images/Soal 8_Pelabuhan_Email Recieve.png>)
