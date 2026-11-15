@@ -223,3 +223,55 @@ Membuat **GRE tunnel** `Tunnel0` antara R-PUSAT (Balai Kota) dan R-PELABUHAN, se
 - `PC-PEGAWAI` (Balai Kota): `ping 10.104.240.1` dan `ping 10.104.160.1` → reply; sebaliknya dari Pelabuhan ke Balai Kota juga berhasil.
 - R-PUSAT & R-PELABUHAN: `show running-config` → cek Tunnel0 + route via `192.168.0.x`.
 - DHCP/NAT/layanan/routing internal tetap berfungsi; link = 31, device = 39.
+## Soal 7
+### Penjelasan singkat
+Seluruh static route antar-router diganti dengan **OSPF** (process 1, area 0) di file terpisah `K13_VLSM_OSPF.pkt`. Ditambahkan link cadangan **L7** antara R-DC dan R-UTARA memakai alamat yang belum terpakai, `10.104.241.56/30` (blok /30 pertama setelah L6). Interface LAN dibuat `passive-interface` agar OSPF tidak mengirim pesan ke LAN pengguna. Default route ke internet hanya dikonfigurasi di R-PUSAT dan disebarkan ke router lain dengan `default-information originate`. Jika link backbone putus, OSPF otomatis memindahkan jalur lewat L7.
+
+![Topologi dengan L7](bukti_soal7/soal7-topologi-L7.png)
+
+### Proses pengerjaan
+1. Salin file utama menjadi `K13_VLSM_OSPF.pkt`.
+2. Pasang link serial **L7**: R-DC `Serial0/3/0` = `10.104.241.57/30` (ujung DCE, `clock rate 2000000`) ↔ R-UTARA `Serial9/0` = `10.104.241.58/30`.
+3. Hapus semua static route antar-router. Yang tersisa hanya `ip route 0.0.0.0 0.0.0.0 203.0.113.54` di R-PUSAT dan 2 rute tunnel GRE dari Soal 6 (`10.104.160.0/19` dan `10.104.240.0/25 via 192.168.0.2`).
+4. Konfigurasi OSPF di setiap router: `router ospf 1`, `router-id`, dan `network ... area 0` untuk link backbone dan LAN.
+
+   | Router | Router-ID | Network yang diiklankan | Passive interface |
+   |---|---|---|---|
+   | R-PUSAT | 1.1.1.1 | L1–L5, `10.104.224.0/21`, `10.104.241.0/27` | Gi6/0, Gi7/0 |
+   | R-DC | 2.2.2.2 | L1, L7, `10.104.96.0/19`, `10.104.239.0/24` | Gi0/1, Gi0/2 |
+   | R-UTARA | 3.3.3.3 | L2, L6, L7, `10.104.0.0/18`, `10.104.236.0/23` | Gi2/0, Gi3/0 |
+   | R-SELATAN | 4.4.4.4 | L3, `10.104.64.0/19`, `10.104.240.128/25` | Gi0/1, Gi0/2 |
+   | R-TIMUR | 5.5.5.5 | L4, `10.104.128.0/19`, `10.104.232.0/22` | Gi0/1, Gi0/2 |
+   | R-BARAT | 6.6.6.6 | L5, `10.104.192.0/19`, `10.104.238.0/24` | Gi0/1, Gi0/2 |
+   | R-PELABUHAN | 7.7.7.7 | L6, `10.104.160.0/19`, `10.104.240.0/25` | Gi0/1, Gi0/2 |
+
+5. R-PUSAT: `default-information originate` agar default route tersebar otomatis ke semua router (muncul sebagai `O*E2`).
+
+**Alasan desain**
+- **Kenapa L7 hanya jadi cadangan:** cost OSPF = 100.000 ÷ bandwidth. Link Gigabit cost 1, sedangkan L7 serial cost 64 dari sisi R-DC (BW 1544 Kbit) dan 781 dari sisi R-UTARA (BW 128 Kbit, bawaan Router-PT). Contohnya dari R-DC ke WiFi Utara: lewat L1–L2 cost 3, lewat L7 cost 65, sehingga OSPF memilih L1–L2 saat normal.
+- **Kenapa static route tunnel GRE tetap ada:** lalu lintas Balai Kota ↔ Pelabuhan wajib lewat tunnel (Soal 6). AD static (1) lebih kecil dari OSPF (110), jadi rute tunnel tetap dipakai. Tunnel tidak dimasukkan ke OSPF untuk menghindari *recursive routing*.
+- **Cakupan redundansi:** L7 memberi jalur cadangan untuk segitiga R-PUSAT – R-DC – R-UTARA (L1, L2, L7). Router lain hanya punya satu link ke backbone.
+
+### Verifikasi
+- R-PUSAT `show ip protocols` → `ospf 1`, Router ID `1.1.1.1`, network area 0, passive `Gi6/0` dan `Gi7/0`.
+  ![show ip protocols R-PUSAT](bukti_soal7/soal7-protocols-pusat.png)
+- R-PUSAT `show ip ospf neighbor` → 5 neighbor **FULL**. `show running-config | include ip route` → hanya default ke ISP dan 2 rute tunnel GRE.
+  ![Neighbor dan static route R-PUSAT](bukti_soal7/soal7-static-pusat.png)
+- R-UTARA → 3 neighbor FULL, termasuk `2.2.2.2` lewat `Serial9/0` (L7). Default route `O*E2 0.0.0.0/0 via 10.104.241.37` didapat dari OSPF.
+  ![Neighbor dan routing R-UTARA](bukti_soal7/soal7-route-utara.png)
+- R-DC → `show running-config | include ip route` kosong (tidak ada static route). 2 neighbor FULL. Default `O*E2 via 10.104.241.33`.
+  ![Routing R-DC](bukti_soal7/soal7-route-dc.png)
+- **Uji failover** (sumber `PC-PEGAWAI-BALAIKOTA` 10.104.224.2, tujuan `SRV-DC` 10.104.239.10):
+  - `tracert` sebelum: `10.104.224.1` → `10.104.241.34` → `10.104.239.10` (lewat L1).
+
+    ![Tracert sebelum](bukti_soal7/soal7-tracert-sebelum.png)
+  - `ping -t`, lalu L1 diputus dengan `shutdown` di R-PUSAT `Gi1/0`. Ping RTO 1 kali lalu pulih otomatis (Sent 28, Received 27, Lost 1). TTL berubah dari 126 ke 125 karena jalur bertambah satu router. Log R-PUSAT: `Nbr 2.2.2.2 ... from FULL to DOWN`.
+    ![Ping RTO lalu pulih](bukti_soal7/soal7-ping-rto.png)
+  - `tracert` sesudah: `10.104.224.1` → `10.104.241.38` (R-UTARA) → `10.104.241.57` (R-DC lewat L7) → `10.104.239.10`.
+
+    ![Tracert sesudah](bukti_soal7/soal7-tracert-sesudah.png)
+  - R-DC saat L1 putus → semua rute dan default `O*E2` lewat `10.104.241.58 Serial0/3/0`.
+    ![Routing R-DC saat failover](bukti_soal7/soal7-route-dc-failover.png)
+  - L1 disambung kembali (`no shutdown`) → log `Nbr 2.2.2.2 ... from LOADING to FULL`, dan `tracert` kembali lewat `10.104.241.34`.
+    ![Neighbor pulih](bukti_soal7/soal7-neighbor-pulih.png)
+    ![Satu siklus failover lengkap](bukti_soal7/soal7-tracert-pulih.png)
