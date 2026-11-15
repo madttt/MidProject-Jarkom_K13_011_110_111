@@ -282,7 +282,7 @@ Seluruh static route antar-router diganti dengan **OSPF** (process 1, area 0) di
 
 # SOAL 8 - Layanan Aplikasi Smart City
 
-Domain internal yang dipakai: **k13.smartcity.lab** (k + nomor kelompok 13).
+Domain internal yang dipakai: **k13.smartcity.lab**
 
 ### 8.1 Ringkasan Layanan
 
@@ -330,7 +330,7 @@ nslookup mail.k13.smartcity.lab
   <head><title>Portal Smart City Surabaya</title></head>
   <body>
     <h1>Portal Smart City Surabaya</h1>
-    <p>Kelompok 13 - Komunikasi Data dan Jaringan Komputer</p>
+    <p>Kelompok 13</p>
   </body>
 </html>
 ```
@@ -386,37 +386,3 @@ Pengguna di Balai Kota dan Pelabuhan dapat saling mengirim dan menerima email.
 | User Name dan Password | sesuai akun di server |
 
 **Pengujian:** kirim email dari PC-PEGAWAI-BALAIKOTA ke PC-KANTOR-PELABUHAN, terima di Pelabuhan lewat tombol **Receive**, lalu balas dari Pelabuhan ke Balai Kota.
-
-### 8.6 Bukti Pengujian
-
-> Tempel screenshot pada kolom Bukti. Contoh: `![DNS dari R-BARAT](images/no8-dns-barat.png)`
-
-**DNS dan Web dari seluruh wilayah**
-
-| Wilayah | Perangkat uji | nslookup www | Web Browser | Bukti |
-|---|---|---|---|---|
-| Balai Kota (R-PUSAT) | PC-PEGAWAI-BALAIKOTA | [ISI] | [ISI] | |
-| DC (R-DC) | PC-CCTV-KOTA | [ISI] | [ISI] | |
-| Utara (R-UTARA) | PC-SENSOR-LALIN | [ISI] | [ISI] | |
-| Barat (R-BARAT) | PC-PUSKESMAS-BARAT | [ISI] | [ISI] | |
-| Timur (R-TIMUR) | PC-SENSOR-BANJIR | [ISI] | [ISI] | |
-| Selatan (R-SELATAN) | PC-PJU-SELATAN | [ISI] | [ISI] | |
-| Pelabuhan (R-PELABUHAN) | PC-KANTOR-PELABUHAN | [ISI] | [ISI] | |
-
-**FTP dan Email**
-
-| Pengujian | Hasil yang diharapkan | Bukti |
-|---|---|---|
-| Login FTP dari PC-CCTV-KOTA dengan akun yang benar | Berhasil | |
-| Unggah berkas rekaman (`put`) | Berkas tersimpan di SRV-DC | |
-| Login FTP dengan akun salah | Ditolak | |
-| Email Balai Kota ke Pelabuhan | Terkirim dan diterima | |
-| Email Pelabuhan ke Balai Kota | Terkirim dan diterima | |
-
-### 8.7 Ketergantungan pada Bagian Lain
-
-| Bagian | Hubungannya dengan layanan |
-|---|---|
-| Soal 3 (static routing) | Seluruh wilayah harus bisa menjangkau LAN Server dan Storage DC serta LAN Server Balai Kota. |
-| Soal 4 (DHCP) | Perangkat pengguna mendapat alamat DNS server (IP SRV-DC) dari DHCP. |
-| Soal 5 (NAT) | Layanan ini hanya memakai alamat privat dan tidak melewati NAT. |
