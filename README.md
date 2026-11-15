@@ -3,7 +3,7 @@
 
 # SOAL 1 - Perancangan Topologi
 ## 1.1 Gambar Topologi
-![alt text](images/Topologi.png)
+![alt text](<images/Soal 1_Topologi.png>)
  
 ## 1.2 Skema Pengalamatan yang Dipilih: VLSM
  
@@ -183,7 +183,8 @@ Seluruh end device (pengguna) diubah dari IP static menjadi **DHCP** (IP, mask, 
 - HP lease: UTARA `10.104.0.2`, TIMUR `10.104.128.2`, SELATAN `10.104.64.2`, BARAT `10.104.192.3`.
 - `nslookup www.k13.smartcity.lab` dan `ping www.k13.smartcity.lab` dari PC DHCP → reply.
 - Link = 31, device = 39; server/router static tetap.
-## Soal 5 
+
+# SOAL 5 
 ### Penjelasan singkat
 Seluruh host internal (`10.104.0.0/16`) mengakses internet lewat **satu IP publik** milik R-PUSAT menggunakan **NAT overload (PAT)**. R-ISP tetap tanpa route ke internal. Output: `v5_nat.pkt`.
 
@@ -202,7 +203,8 @@ Seluruh host internal (`10.104.0.0/16`) mengakses internet lewat **satu IP publi
 - `PC-PEGAWAI`: `ping 8.8.8.8` → `Reply from 8.8.8.8` (ping pertama boleh timeout karena ARP warm-up, ulangi).
 - R-PUSAT: `show ip nat statistics` → Outside `Gi0/0`, Inside 7 interface, `Hits > 0`, `Expired translations > 0`.
 - DHCP/layanan/routing internal tetap berfungsi.
-## Soal 6 
+
+# SOAL 6 
 ### Penjelasan singkat
 Membuat **GRE tunnel** `Tunnel0` antara R-PUSAT (Balai Kota) dan R-PELABUHAN, sehingga lalu lintas antara kedua area harus lewat tunnel (menggantikan jalur via R-UTARA). Dilengkapi dokumentasi: mengapa tunnel vs jalur biasa, dan mengapa GRE tidak mengenkripsi (bonus IPsec). Output: `v6_gre.pkt`.
 
@@ -223,7 +225,8 @@ Membuat **GRE tunnel** `Tunnel0` antara R-PUSAT (Balai Kota) dan R-PELABUHAN, se
 - `PC-PEGAWAI` (Balai Kota): `ping 10.104.240.1` dan `ping 10.104.160.1` → reply; sebaliknya dari Pelabuhan ke Balai Kota juga berhasil.
 - R-PUSAT & R-PELABUHAN: `show running-config` → cek Tunnel0 + route via `192.168.0.x`.
 - DHCP/NAT/layanan/routing internal tetap berfungsi; link = 31, device = 39.
-## Soal 7
+
+# SOAL 7
 ### Penjelasan singkat
 Seluruh static route antar-router diganti dengan **OSPF** (process 1, area 0) di file terpisah `K13_VLSM_OSPF.pkt`. Ditambahkan link cadangan **L7** antara R-DC dan R-UTARA memakai alamat yang belum terpakai, `10.104.241.56/30` (blok /30 pertama setelah L6). Interface LAN dibuat `passive-interface` agar OSPF tidak mengirim pesan ke LAN pengguna. Default route ke internet hanya dikonfigurasi di R-PUSAT dan disebarkan ke router lain dengan `default-information originate`. Jika link backbone putus, OSPF otomatis memindahkan jalur lewat L7.
 
@@ -275,3 +278,145 @@ Seluruh static route antar-router diganti dengan **OSPF** (process 1, area 0) di
   - L1 disambung kembali (`no shutdown`) → log `Nbr 2.2.2.2 ... from LOADING to FULL`, dan `tracert` kembali lewat `10.104.241.34`.
     ![Neighbor pulih](bukti_soal7/soal7-neighbor-pulih.png)
     ![Satu siklus failover lengkap](bukti_soal7/soal7-tracert-pulih.png)
+
+
+# SOAL 8 - Layanan Aplikasi Smart City
+
+Domain internal yang dipakai: **k13.smartcity.lab** (k + nomor kelompok 13).
+
+### 8.1 Ringkasan Layanan
+
+| Soal | Layanan | Dijalankan di | Nama domain | Protokol | Diakses dari |
+|---|---|---|---|---|---|
+| 8a | DNS | SRV-DC (LAN Server dan Storage DC) | - | DNS (UDP 53) | Seluruh wilayah |
+| 8b | Web "Portal Smart City Surabaya" | SRV-BALAIKOTA (LAN Server Balai Kota) | www.k13.smartcity.lab | HTTP (TCP 80) | Seluruh wilayah |
+| 8c | FTP penyimpanan rekaman CCTV | SRV-DC (LAN Server dan Storage DC) | ftp.k13.smartcity.lab | FTP (TCP 21) | LAN CCTV Kota (unggah) |
+| 8d | Email antarpegawai | [ISI: server email, mis. SRV-BALAIKOTA] | mail.k13.smartcity.lab | SMTP (TCP 25) dan POP3 (TCP 110) | Pengguna Balai Kota dan Pelabuhan |
+
+Alamat IP server (statis, sesuai soal 4):
+
+| Server | LAN | IP | Mask | Gateway |
+|---|---|---|---|---|
+| SRV-DC | 10.104.239.0/24 | 10.104.239.[ISI] | 255.255.255.0 | 10.104.239.1 |
+| SRV-BALAIKOTA | 10.104.241.0/27 | 10.104.241.[ISI] | 255.255.255.224 | 10.104.241.1 |
+
+### 8.2 DNS (Soal 8a)
+
+SRV-DC dipilih sebagai server DNS karena soal menempatkan DNS di LAN Server dan Storage DC.
+
+**Konfigurasi di SRV-DC:** buka tab **Services**, pilih **DNS**, lalu nyalakan **DNS Service (On)**. Tambahkan record bertipe **A Record**:
+
+| Name | Type | Address | Menunjuk ke |
+|---|---|---|---|
+| www.k13.smartcity.lab | A Record | [ISI: IP SRV-BALAIKOTA] | Server web |
+| ftp.k13.smartcity.lab | A Record | 10.104.239.[ISI] | SRV-DC |
+| mail.k13.smartcity.lab | A Record | [ISI: IP server email] | Server email |
+
+
+**Pengujian:** dari satu perangkat di setiap wilayah, jalankan di Command Prompt:
+
+```
+nslookup www.k13.smartcity.lab
+nslookup ftp.k13.smartcity.lab
+nslookup mail.k13.smartcity.lab
+```
+
+### 8.3 Web "Portal Smart City Surabaya" (Soal 8b)
+
+**Konfigurasi di SRV-BALAIKOTA:** buka tab **Services**, pilih **HTTP**, nyalakan **HTTP (On)**. Ubah berkas **index.html** menjadi halaman portal yang memuat nomor kelompok, misalnya:
+
+```html
+<html>
+  <head><title>Portal Smart City Surabaya</title></head>
+  <body>
+    <h1>Portal Smart City Surabaya</h1>
+    <p>Kelompok 13 - Komunikasi Data dan Jaringan Komputer</p>
+  </body>
+</html>
+```
+
+**Pengujian:** dari perangkat di setiap wilayah, buka **Web Browser** dan akses `http://www.k13.smartcity.lab`. Halaman harus tampil dengan judul dan nomor kelompok.
+
+### 8.4 FTP Rekaman CCTV (Soal 8c)
+
+FTP ditempatkan di SRV-DC sebagai penyimpanan rekaman CCTV, dan akses mewajibkan akun login.
+
+**Konfigurasi di SRV-DC:** buka tab **Services**, pilih **FTP**, nyalakan **FTP Service (On)**. Pada daftar akun:
+
+| Langkah | Tujuan |
+|---|---|
+| Tambah akun `[ISI: mis. cctv]` dengan password `[ISI]` dan izin **Write, Read, Delete, Rename, List** | Akun untuk perangkat CCTV mengunggah rekaman |
+
+**Pengujian dari PC-CCTV-KOTA:**
+
+1. Buat berkas contoh lewat **Desktop, Text Editor**, simpan sebagai `rekaman_cctv_01.txt`.
+2. Buka **Command Prompt** dan jalankan:
+
+```
+ftp ftp.k13.smartcity.lab
+Username: [ISI]
+Password: [ISI]
+ftp> put rekaman_cctv_01.txt
+ftp> dir
+ftp> quit
+```
+
+3. Berkas muncul pada daftar `dir`, dan juga pada tab Services, FTP di SRV-DC.
+4. Percobaan login dengan akun yang salah harus ditolak.
+
+### 8.5 Email Antarpegawai (Soal 8d)
+
+Pengguna di Balai Kota dan Pelabuhan dapat saling mengirim dan menerima email.
+
+**Konfigurasi di server email:** buka tab **Services**, pilih **EMAIL**, nyalakan **SMTP Service** dan **POP3 Service**. Isi **Domain Name** dengan `k13.smartcity.lab`, lalu klik **Set**. Tambahkan pengguna:
+
+| Pengguna | Perangkat | Email | Password |
+|---|---|---|---|
+| [ISI: mis. pegawai] | PC-PEGAWAI-BALAIKOTA (Balai Kota) | [ISI]@k13.smartcity.lab | [ISI] |
+| [ISI: mis. pelabuhan] | PC-KANTOR-PELABUHAN (Pelabuhan) | [ISI]@k13.smartcity.lab | [ISI] |
+
+**Konfigurasi di perangkat pengguna:** buka **Desktop, Email, Configure Mail**, lalu isi:
+
+| Kolom | Isi |
+|---|---|
+| Your Name | [ISI] |
+| Email Address | [ISI]@k13.smartcity.lab |
+| Incoming Mail Server | mail.k13.smartcity.lab |
+| Outgoing Mail Server | mail.k13.smartcity.lab |
+| User Name dan Password | sesuai akun di server |
+
+**Pengujian:** kirim email dari PC-PEGAWAI-BALAIKOTA ke PC-KANTOR-PELABUHAN, terima di Pelabuhan lewat tombol **Receive**, lalu balas dari Pelabuhan ke Balai Kota.
+
+### 8.6 Bukti Pengujian
+
+> Tempel screenshot pada kolom Bukti. Contoh: `![DNS dari R-BARAT](images/no8-dns-barat.png)`
+
+**DNS dan Web dari seluruh wilayah**
+
+| Wilayah | Perangkat uji | nslookup www | Web Browser | Bukti |
+|---|---|---|---|---|
+| Balai Kota (R-PUSAT) | PC-PEGAWAI-BALAIKOTA | [ISI] | [ISI] | |
+| DC (R-DC) | PC-CCTV-KOTA | [ISI] | [ISI] | |
+| Utara (R-UTARA) | PC-SENSOR-LALIN | [ISI] | [ISI] | |
+| Barat (R-BARAT) | PC-PUSKESMAS-BARAT | [ISI] | [ISI] | |
+| Timur (R-TIMUR) | PC-SENSOR-BANJIR | [ISI] | [ISI] | |
+| Selatan (R-SELATAN) | PC-PJU-SELATAN | [ISI] | [ISI] | |
+| Pelabuhan (R-PELABUHAN) | PC-KANTOR-PELABUHAN | [ISI] | [ISI] | |
+
+**FTP dan Email**
+
+| Pengujian | Hasil yang diharapkan | Bukti |
+|---|---|---|
+| Login FTP dari PC-CCTV-KOTA dengan akun yang benar | Berhasil | |
+| Unggah berkas rekaman (`put`) | Berkas tersimpan di SRV-DC | |
+| Login FTP dengan akun salah | Ditolak | |
+| Email Balai Kota ke Pelabuhan | Terkirim dan diterima | |
+| Email Pelabuhan ke Balai Kota | Terkirim dan diterima | |
+
+### 8.7 Ketergantungan pada Bagian Lain
+
+| Bagian | Hubungannya dengan layanan |
+|---|---|
+| Soal 3 (static routing) | Seluruh wilayah harus bisa menjangkau LAN Server dan Storage DC serta LAN Server Balai Kota. |
+| Soal 4 (DHCP) | Perangkat pengguna mendapat alamat DNS server (IP SRV-DC) dari DHCP. |
+| Soal 5 (NAT) | Layanan ini hanya memakai alamat privat dan tidak melewati NAT. |
